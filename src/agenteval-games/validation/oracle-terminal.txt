@@ -1,0 +1,21 @@
+  50/50 Mean: 1.000 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 0:09:04 0:00:00
+agenteval-generated • oracle
+┏━━━━━━━━┳━━━━━━━━━━━━┳━━━━━━━┓
+┃ Trials ┃ Exceptions ┃  Mean ┃
+┡━━━━━━━━╇━━━━━━━━━━━━╇━━━━━━━┩
+│     50 │          0 │ 1.000 │
+└────────┴────────────┴───────┘
+
+┏━━━━━━━━┳━━━━━━━┓
+┃ Reward ┃ Count ┃
+┡━━━━━━━━╇━━━━━━━┩
+│ 1.0    │    50 │
+└────────┴───────┘
+
+Job Info
+Total runtime: 9m 4s
+Results written to /tmp/agenteval-harbor-jobs/agenteval-oracle-50/result.json
+Inspect results by running `harbor view /tmp/agenteval-harbor-jobs`
+Share results by running `harbor upload 
+/tmp/agenteval-harbor-jobs/agenteval-oracle-50`
+

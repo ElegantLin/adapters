@@ -1,0 +1,78 @@
+{
+  "schema_version": 1,
+  "purpose": "Negative control: an agent taking no actions must receive zero reward.",
+  "harbor_version": "0.23.0",
+  "harbor_commit": "99218a4611e3bd76e49ce3b5f977e8c8134ad3ac",
+  "job_name": "agenteval-nop-smoke-01",
+  "paid_model_calls": 0,
+  "job_result": {
+    "id": "e1a3faf9-db88-42bc-9af8-a7fea9cf71d4",
+    "started_at": "2026-11-18T14:39:17.669394",
+    "updated_at": "2026-11-18T14:39:51.314508",
+    "finished_at": "2026-11-18T14:39:51.314508",
+    "n_total_trials": 2,
+    "stats": {
+      "n_completed_trials": 2,
+      "n_errored_trials": 0,
+      "n_running_trials": 0,
+      "n_pending_trials": 0,
+      "n_cancelled_trials": 0,
+      "n_retries": 0,
+      "evals": {
+        "nop__agenteval-generated": {
+          "n_trials": 2,
+          "n_errors": 0,
+          "metrics": [
+            {
+              "mean": 0.0
+            }
+          ],
+          "pass_at_k": {},
+          "reward_stats": {
+            "reward": {
+              "0.0": [
+                "agenteval-maze-00__SYKx597",
+                "agenteval-wordle-00__dNnLAx7"
+              ]
+            }
+          },
+          "exception_stats": {}
+        }
+      },
+      "n_input_tokens": null,
+      "n_cache_tokens": null,
+      "n_output_tokens": null,
+      "cost_usd": null
+    }
+  },
+  "trials": [
+    {
+      "id": "129e65a2-2c26-4188-891a-233f0b7f438f",
+      "task_name": "agentgym/agenteval-maze-00",
+      "trial_name": "agenteval-maze-00__SYKx597",
+      "task_checksum": "e30446a08940236c8e805309d2a757468a2877d94972021608f00e7b691ff7af",
+      "verifier_result": {
+        "rewards": {
+          "reward": 0.0
+        }
+      },
+      "exception_info": null,
+      "started_at": "2026-11-18T22:39:17.715596Z",
+      "finished_at": "2026-11-18T22:39:51.312375Z"
+    },
+    {
+      "id": "6328e51f-144e-46c2-8125-d3ecd9e570aa",
+      "task_name": "agentgym/agenteval-wordle-00",
+      "trial_name": "agenteval-wordle-00__dNnLAx7",
+      "task_checksum": "4595d4262a3dcf46088aa0d0fb932578e25086cc94d026ac9779356f09301cef",
+      "verifier_result": {
+        "rewards": {
+          "reward": 0.0
+        }
+      },
+      "exception_info": null,
+      "started_at": "2026-11-18T22:39:17.739504Z",
+      "finished_at": "2026-11-18T22:39:51.058637Z"
+    }
+  ]
+}

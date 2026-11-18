@@ -1,0 +1,92 @@
+{
+  "formatter": "ruff==0.11.13",
+  "files": 17,
+  "all_ast_unchanged": true,
+  "details": [
+    {
+      "file": "scripts/check_native_harbor.py",
+      "ast_sha256": "072b182970a80f541af153eafd5b922987288b0eca13371b0ed6919d5be388b6",
+      "format_changed": true
+    },
+    {
+      "file": "scripts/check_upstream.py",
+      "ast_sha256": "fcbc32653e207485cf21c1aa2ca879e5f990de8425457978853c6c7525ec3e8e",
+      "format_changed": true
+    },
+    {
+      "file": "src/agenteval_games/__init__.py",
+      "ast_sha256": "9ab931908e58f5ed9def054c67266d03faaf24b61d88f37f8c6e40db33be396e",
+      "format_changed": false
+    },
+    {
+      "file": "src/agenteval_games/adapter.py",
+      "ast_sha256": "ecc7b2ba1962365a0bd774a7281d11d5b55bb3f19a77a07a4e5f230178e62ac4",
+      "format_changed": true
+    },
+    {
+      "file": "src/agenteval_games/harbor_agent.py",
+      "ast_sha256": "492ffaa29479731ae1db81cf8570cda9d8ad83a54c55fff477343ba561efdfb1",
+      "format_changed": true
+    },
+    {
+      "file": "src/agenteval_games/main.py",
+      "ast_sha256": "23b14a6dcaa63c556cf9497f582f85d09e79f771ecc6de905a434a1d1baed4f7",
+      "format_changed": true
+    },
+    {
+      "file": "src/agenteval_games/native_policy.py",
+      "ast_sha256": "6710f5ce0418dfa22b4cfc197c26ffa78c3d19d36dbd4c2369257ea7a760d5c3",
+      "format_changed": true
+    },
+    {
+      "file": "src/agenteval_games/original_runner.py",
+      "ast_sha256": "4c142a1071aea762220765d1df1719a481b8d4345eacd4febd89710a304fca98",
+      "format_changed": true
+    },
+    {
+      "file": "src/agenteval_games/runtime/__init__.py",
+      "ast_sha256": "ad2e13b69c4fc1fda46413f740f426fc1793cfc6d6da8d226ba619f1aef48be7",
+      "format_changed": false
+    },
+    {
+      "file": "src/agenteval_games/runtime/engine.py",
+      "ast_sha256": "23ebe9ae77d03ff7c4dbc11ff6037bf7109f567c380669efe51ee9d254782353",
+      "format_changed": true
+    },
+    {
+      "file": "src/agenteval_games/runtime/server.py",
+      "ast_sha256": "1923386c877eb2c60d3c64134c90d501360efe882bd20f4d776fedf23729c5da",
+      "format_changed": true
+    },
+    {
+      "file": "src/agenteval_games/runtime/verification.py",
+      "ast_sha256": "a9be3b9767d07a6b1c188ab00051d56d30735d14452de1367353bea54d810720",
+      "format_changed": true
+    },
+    {
+      "file": "src/agenteval_games/task-template/environment/game.py",
+      "ast_sha256": "e438027442b456ab60c17d94885c5bc46abb34891dd90661128eafb99854bb4f",
+      "format_changed": true
+    },
+    {
+      "file": "src/agenteval_games/task-template/solution/solve.py",
+      "ast_sha256": "bed684edff5e73cf9313be6fd88add891b2e20191bf13327a21588cf7ad61a60",
+      "format_changed": true
+    },
+    {
+      "file": "src/agenteval_games/task-template/tests/verify.py",
+      "ast_sha256": "bcab21ff962e0e5fe20ba032b76ea0a7771ce6d9aaf408820bb5fff85d637979",
+      "format_changed": true
+    },
+    {
+      "file": "tests/test_adapter.py",
+      "ast_sha256": "937bbf263dc11166884bd1d3c3294949f9ce3dc04376c0e506050e6ca6b30f05",
+      "format_changed": true
+    },
+    {
+      "file": "tests/test_native_agent.py",
+      "ast_sha256": "2eecd8a1f090c185daaad10404f443c59a9688999f7dc4f933e7baae939df003",
+      "format_changed": true
+    }
+  ]
+}
