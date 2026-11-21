@@ -9,8 +9,8 @@ preserves the published test IDs, original instructions, seeded game behavior,
 action parsing, and final-step reward.
 
 Status: **WIP**. All 50 reference solutions passed through the real Harbor/Docker
-harness with zero exceptions. Model parity, Harbor team review, and dataset
-registration remain pending. The
+harness with zero exceptions, graded by a separate verifier on Harbor 0.26.0.
+Model parity, Harbor team review, and dataset registration remain pending. The
 empty `parity_experiment.json` records that no model experiment has been run; it
 must not be interpreted as a passing parity result.
 
@@ -35,11 +35,14 @@ at most six guesses.
 - An isolated game sidecar holds the seed, authoritative state, and trajectory.
   The agent container receives only the terminal `game` client. Every submitted
   action, including an invalid action, consumes an original benchmark turn.
-- The verifier authenticates a transcript signed with an ephemeral Ed25519 key
-  and replays every action against protected benchmark code. Only the public key
-  is shared with the agent container, through a read-only volume. Workspace files,
-  forged rewards, rewritten clients, and forged HTTP responses cannot manufacture
-  a valid episode transcript.
+- Grading runs in a **separate verifier environment** built from
+  `tests/Dockerfile`, never in the agent's container. The sidecar records the
+  authoritative transcript on its own filesystem. After the agent phase Harbor
+  stops the agent container, collects the transcript directly from the sidecar,
+  and the verifier replays every action against its own copy of the benchmark
+  code. The agent container shares no volume with the sidecar or the verifier,
+  so workspace files, forged rewards or transcripts, rewritten clients, and
+  forged HTTP responses cannot change the graded episode.
 - Maze reference solutions use shortest paths. Wordle reference solutions use
   the first remaining vocabulary candidate and update candidates from public
   feedback. They do not require access to the next random target.
@@ -66,6 +69,7 @@ agenteval-maze-00/
 │   ├── solve.py
 │   └── actions.json
 └── tests/
+    ├── Dockerfile                 # separate verifier image
     ├── test.sh
     ├── verify.py
     ├── config.json
@@ -75,7 +79,13 @@ agenteval-maze-00/
 
 Only the files explicitly copied by `environment/Dockerfile` enter the agent
 image. The game configuration and game implementation enter the separate sidecar.
-Harbor supplies `solution/` to oracle trials and `tests/` for verification.
+Harbor supplies `solution/` to oracle trials. `tests/` is the build context of
+the verifier image; it is never uploaded into the agent container.
+
+`task.toml` sets `[verifier].environment_mode = "separate"` and declares one
+artifact, `{ source = "/game-evidence/transcript.json", service = "game" }`.
+That file is the only input the verifier takes from a trial, and Harbor keeps a
+copy at `artifacts/game-evidence/transcript.json` in the trial directory.
 
 ## Run Evaluation / Harness
 
@@ -95,18 +105,25 @@ Or generate into `datasets/agenteval-games` and use the checked-in reference con
 harbor run -c src/agenteval-games/run_agenteval-games.yaml
 ```
 
-On November 18, 2026, the full oracle run completed **50/50 tasks with reward 1**
-(mean 1.000, zero exceptions) in 9 minutes 4 seconds using the pinned Harbor
-revision. A no-action control on one task from each game returned **0 on both**.
+On November 20, 2026, the full oracle run completed **50/50 tasks with reward 1**
+(mean 1.000, zero exceptions, zero retries) in 9 minutes 44 seconds on Harbor
+0.26.0, with every trial graded in the separate verifier environment. Two
+negative controls on one task from each game returned **0 on both**: a
+no-action agent, and a known-wrong submission that loses the real episode and
+then plants a winning transcript and reward files inside the agent container.
 See [full oracle results](validation/harbor-oracle.json),
-[no-action controls](validation/harbor-nop-smoke.json), and the
+[no-action controls](validation/harbor-nop-smoke.json),
+[wrong-submission controls](validation/harbor-wrong-submission.json), and the
 [captured terminal output](validation/oracle-terminal.txt).
 
 ![Actual Harbor oracle command output](validation/oracle-terminal.svg)
 
 Each task requires Docker Compose because the private game service must remain
-outside the agent container. Single-container/cloud backends have not been
-validated. A task does not require a GPU or a model-based judge.
+outside the agent container, and a Harbor release that supports separate
+verifiers and per-service (`service = ...`) artifact collection. The tasks are
+validated on Harbor 0.26.0 with the local Docker backend; single-container and
+cloud backends have not been validated. A task does not require a GPU or a
+model-based judge.
 
 ## Usage: Create Task Directories
 
@@ -148,7 +165,7 @@ Run deterministic checks without model API calls:
 ```bash
 # Lightweight checks; optional Harbor/upstream integration checks may be skipped.
 uv run python -m unittest discover -s tests -v
-# All 21 tests, with the pinned Harbor environment and upstream checkout available.
+# All 24 tests, with the pinned Harbor environment and upstream checkout available.
 AGENTEVAL_UPSTREAM_DIR=/path/to/AgentGym /tmp/agenteval-harbor/bin/python -m unittest discover -s tests -v
 # Independent, pinned Python 3.9.12 comparison with the original implementation.
 bash scripts/run_upstream_check.sh
@@ -158,7 +175,7 @@ uv run python scripts/check_native_harbor.py \
   --jobs-dir /tmp/agenteval-harbor-jobs --job-name native-smoke-01
 ```
 
-The complete unit/integration suite passed **21/21 with no skips**. A separate
+The complete unit/integration suite passed **24/24 with no skips**. A separate
 real Harbor/Docker smoke test also exercised the native agent on one Maze and one
 Wordle task using a **local mock model endpoint**, achieving 2/2 successful
 reference episodes with no exceptions ([results](validation/harbor-native-smoke.json)).
@@ -240,8 +257,8 @@ uploads, a parity fork/PR, dataset PR, and registry publication do not exist yet
 - Source/runtime pins: AgentGym `3ef9235d23e68e7c2920c5422ad957dc8ced5c6c`,
   LMRL-Gym `83abeedb3a461c3d7d20572b73318a259d85f2ac`, AgentEval
   `1f090d52ef01a83a889da02699e34a500e35a274`, Python **3.9.12** inside tasks,
-  and Harbor `99218a4611e3bd76e49ce3b5f977e8c8134ad3ac`. The Python base image
-  is digest-pinned in both Dockerfiles. Adapter generation uses Python 3.11+.
+  and Harbor **0.26.0**. The Python base image is digest-pinned in all three
+  Dockerfiles (agent, sidecar, verifier). Adapter generation uses Python 3.11+.
 - Exclusions: all other AgentGym environments, their training splits, and any
   expanded/randomized Maze or Wordle instances. The two selected test splits
   themselves are complete; no task was dropped or sampled.
@@ -252,10 +269,13 @@ uploads, a parity fork/PR, dataset PR, and registry publication do not exist yet
 - Original AgentGym and LMRL-Gym MIT notices are included. AgentEval's pinned
   dataset has no separate license declaration in its card; the adapter records
   that provenance without assigning it an invented dataset license.
-- The signed trace protects against workspace/HTTP tampering; it assumes Harbor
-  and Docker enforce container separation and the read-only public-key mount.
-  As with ordinary Harbor verifiers, a compromised container runtime or altered
-  trusted verification runtime is outside this boundary.
+- The grading boundary is Harbor's separate verifier plus Docker's container
+  separation: the agent container reaches the sidecar only through its HTTP API
+  and shares no volume with it, and Harbor reads the transcript from the
+  sidecar itself. The transcript is not cryptographically signed, because its
+  authenticity comes from that collection path rather than from anything the
+  agent container handles. A compromised container runtime or Harbor host is
+  outside this boundary.
 - `parity_experiment.json` intentionally contains `[]`. The repository's completed
   adapter validator rejects an empty experiment array; this is an explicit WIP
   gap until real, coordinated experiments can populate it. No fabricated scores,
@@ -269,14 +289,15 @@ baseline in a separate environment:
 
 ```bash
 uv venv --python 3.12 /tmp/agenteval-harbor
-uv pip install --python /tmp/agenteval-harbor/bin/python 'harbor @ git+https://github.com/harbor-framework/harbor.git@99218a4611e3bd76e49ce3b5f977e8c8134ad3ac'
+uv pip install --python /tmp/agenteval-harbor/bin/python 'harbor==0.26.0'
 uv pip install --python /tmp/agenteval-harbor/bin/python -e .
 /tmp/agenteval-harbor/bin/harbor --version
 ```
 
 Run these commands from `src/agenteval-games`. Task generation needs no network
 access after dependencies are installed. Docker image builds need access to the
-pinned Python image and pinned Python packages. Standard Harbor agents install
+pinned Python image; the sidecar and verifier images also install one pinned
+Python package. Standard Harbor agents install
 their own CLI prerequisites and need their usual model credentials; oracle and
 deterministic checks do not use model credentials.
 
@@ -286,11 +307,13 @@ deterministic checks do not use model credentials.
   reset endpoint that would let an agent retry the same hidden episode.
 - **Invalid Wordle guess:** use one of the 40 supplied lowercase vocabulary words.
   Invalid guesses still count toward the six-attempt limit.
-- **Reward stays zero:** inspect `/logs/verifier/transcript.json` and the original
-  step observations. A final answer file or edited local score is not evaluated.
-- **Signature or replay verification fails:** inspect container isolation and the
-  `/game-public` mount. Do not disable authentication or accept an agent-written
-  transcript as a workaround.
+- **Reward stays zero:** inspect `artifacts/game-evidence/transcript.json` in the
+  trial directory and the original step observations. A final answer file or
+  edited local score is not evaluated.
+- **Transcript is missing or replay fails:** check the `game` entry in
+  `artifacts/manifest.json` and `verifier/test-stdout.txt`. Do not switch the
+  verifier to shared mode or accept a transcript from the agent container as a
+  workaround.
 - **Game host is unavailable:** run with the Docker backend and check the game
   sidecar health. The terminal client uses the Compose service name `game`.
 - **Structural validator reports missing parity evidence:** expected for this WIP;

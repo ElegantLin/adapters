@@ -1,18 +1,17 @@
-import base64
 from copy import deepcopy
 import json
 from pathlib import Path
+import subprocess
+import sys
 import tempfile
 import threading
 import tomllib
 import unittest
 import urllib.error
 import urllib.request
-from cryptography.exceptions import InvalidSignature
-from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from agenteval_games.adapter import AgentEvalGamesAdapter, DATA, records
 from agenteval_games.runtime.engine import Session, parse_action, reference_actions
-from agenteval_games.runtime.server import GameServer, canonical
+from agenteval_games.runtime.server import GameServer
 from agenteval_games.runtime.verification import verify
 
 
@@ -84,8 +83,17 @@ class GeneratorTests(unittest.TestCase):
                 self.assertNotIn("COPY config", main)
                 self.assertNotIn("COPY runtime", main)
                 compose = (left / "environment/docker-compose.yaml").read_text()
-                self.assertIn("game-public:/game-public:ro", compose)
+                self.assertNotIn("volumes", compose)
                 self.assertNotIn("docker.sock", compose)
+                task = tomllib.loads((left / "task.toml").read_text())
+                self.assertEqual(task["verifier"]["environment_mode"], "separate")
+                self.assertEqual(
+                    task["artifacts"],
+                    [{"source": "/game-evidence/transcript.json", "service": "game"}],
+                )
+                verifier = (left / "tests/Dockerfile").read_text()
+                self.assertIn("COPY . /tests/", verifier)
+                self.assertTrue((left / "tests/runtime/verification.py").is_file())
 
     def test_selection_validation_and_overwrite(self):
         with tempfile.TemporaryDirectory() as out:
@@ -117,7 +125,7 @@ class TransportTests(unittest.TestCase):
         self.thread = threading.Thread(target=self.server.serve_forever, daemon=True)
         self.thread.start()
         self.url = "http://127.0.0.1:" + str(self.server.server_port)
-        self.key = (Path(self.temp.name) / "key.pub").read_bytes()
+        self.evidence = Path(self.temp.name) / "transcript.json"
 
     def tearDown(self):
         self.server.shutdown()
@@ -134,42 +142,137 @@ class TransportTests(unittest.TestCase):
         with urllib.request.urlopen(req, timeout=5) as response:
             return json.load(response)
 
-    def test_signed_authoritative_trace_and_replay(self):
+    def transcript(self):
+        return json.loads(self.evidence.read_text())
+
+    def test_authoritative_trace_is_persisted_and_replayed(self):
         initial = self.request("/observation")
         self.assertEqual(initial["game"], "wordle")
         self.assertNotIn("index", initial)
         self.assertEqual(self.request("/observation"), initial)
-        for action in reference_actions(self.config, DATA):
-            self.request("/step", {"action": action})
-        envelope = self.request("/transcript")
-        self.assertEqual(verify(envelope, self.key, self.config, DATA), 1)
+        actions = reference_actions(self.config, DATA)
+        for turn, action in enumerate(actions, 1):
+            result = self.request("/step", {"action": action})
+            # Each turn is on disk by the time the agent sees its result.
+            recorded = self.transcript()["turns"]
+            self.assertEqual(len(recorded), turn)
+            self.assertEqual(recorded[-1], {"action": action, "result": result})
+        transcript = self.transcript()
+        self.assertEqual(verify(transcript, self.config, DATA), 1)
         with self.assertRaises(urllib.error.HTTPError):
             self.request("/step", {"action": "again"})
-        self.assertEqual(envelope, self.request("/transcript"))
-        tampered = deepcopy(envelope)
-        tampered["transcript"]["turns"][0]["action"] = "cheat"
-        with self.assertRaises(InvalidSignature):
-            verify(tampered, self.key, self.config, DATA)
-        forged = deepcopy(envelope)
-        forged["signature"] = base64.b64encode(
-            Ed25519PrivateKey.generate().sign(canonical(forged["transcript"]))
-        ).decode()
-        with self.assertRaises(InvalidSignature):
-            verify(forged, self.key, self.config, DATA)
+        self.assertEqual(transcript, self.transcript())
+        self.assertEqual(
+            sorted(p.name for p in self.evidence.parent.iterdir()), ["transcript.json"]
+        )
         with self.assertRaises(ValueError):
-            verify(envelope, self.key, {"game": "wordle", "index": 1}, DATA)
+            verify(transcript, {"game": "wordle", "index": 1}, DATA)
+
+    def test_replay_rejects_edited_transcripts(self):
+        actions = reference_actions(self.config, DATA)
+        for action in actions[:-1]:
+            self.request("/step", {"action": action})
+        losing = self.transcript()
+        self.assertEqual(verify(losing, self.config, DATA), 0)
+        # Claiming a win without the winning move does not survive replay.
+        claimed = deepcopy(losing)
+        claimed["turns"][-1]["result"].update(reward=1, done=True)
+        claimed["final"].update(reward=1, done=True)
+        with self.assertRaises(ValueError):
+            verify(claimed, self.config, DATA)
+        swapped = deepcopy(losing)
+        swapped["turns"][0]["action"] = "cheat"
+        with self.assertRaises(ValueError):
+            verify(swapped, self.config, DATA)
+        padded = deepcopy(losing)
+        padded["turns"] = padded["turns"] * 9
+        with self.assertRaises(ValueError):
+            verify(padded, self.config, DATA)
+        for malformed in ([], {"version": 1}, {**losing, "version": 2}):
+            with self.assertRaises(ValueError):
+                verify(malformed, self.config, DATA)
+        with self.assertRaises(ValueError):
+            verify({**losing, "turns": ["move"]}, self.config, DATA)
 
     def test_no_reset_secret_or_transport_cheat(self):
-        for path in ("/reset", "/create", "/config", "/filtered_vocab", "/private-key"):
+        for path in (
+            "/reset",
+            "/create",
+            "/config",
+            "/filtered_vocab",
+            "/transcript",
+            "/game-evidence/transcript.json",
+        ):
             with self.assertRaises(urllib.error.HTTPError) as error:
                 self.request(path, {"action": "hello"})
             self.assertEqual(error.exception.code, 404)
+            with self.assertRaises(urllib.error.HTTPError) as error:
+                self.request(path)
+            self.assertEqual(error.exception.code, 404)
         with self.assertRaises(urllib.error.HTTPError):
             self.request("/step", {"action": [], "reward": 1})
-        envelope = self.request("/transcript")
-        self.assertEqual(len(envelope["transcript"]["turns"]), 0)
-        self.assertEqual(verify(envelope, self.key, self.config, DATA), 0)
-        self.assertNotIn("seed", json.dumps(envelope))
+        transcript = self.transcript()
+        self.assertEqual(len(transcript["turns"]), 0)
+        self.assertEqual(verify(transcript, self.config, DATA), 0)
+        self.assertNotIn("seed", json.dumps(transcript))
+
+
+class VerifierEntrypointTests(unittest.TestCase):
+    """Run a generated task's tests/verify.py as the verifier image does."""
+
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        root = Path(self.temp.name)
+        self.config = {"game": "maze", "index": 0}
+        (task,) = AgentEvalGamesAdapter(
+            root / "tasks", task_ids=["agenteval-maze-00"]
+        ).run()
+        self.script = task / "tests/verify.py"
+        self.evidence = root / "transcript.json"
+        self.logs = root / "logs"
+
+    def tearDown(self):
+        self.temp.cleanup()
+
+    def grade(self, transcript=None):
+        if transcript is not None:
+            self.evidence.write_text(json.dumps(transcript))
+        result = subprocess.run(
+            [sys.executable, "-I", self.script, self.evidence, self.logs],
+            capture_output=True,
+            text=True,
+        )
+        return result.returncode, (self.logs / "reward.txt").read_text()
+
+    def play(self, actions):
+        session = Session(self.config, DATA)
+        for action in actions:
+            session.step(action)
+        return session.transcript()
+
+    def test_reference_scores_one_and_wrong_submissions_score_zero(self):
+        reference = reference_actions(self.config, DATA)
+        self.assertEqual(self.grade(self.play(reference)), (0, "1\n"))
+        self.assertEqual(self.grade(self.play([])), (0, "0\n"))
+        self.assertEqual(self.grade(self.play(["move up"] * 15)), (0, "0\n"))
+
+    def test_missing_or_invalid_evidence_fails_closed(self):
+        code, reward = self.grade()
+        self.assertNotEqual(code, 0)
+        self.assertEqual(reward, "0\n")
+        forged = self.play(["move up"] * 15)
+        forged["final"].update(reward=1, done=True)
+        code, reward = self.grade(forged)
+        self.assertNotEqual(code, 0)
+        self.assertEqual(reward, "0\n")
+        # A valid winning transcript for another task is not accepted here.
+        other = {"game": "maze", "index": 1}
+        session = Session(other, DATA)
+        for action in reference_actions(other, DATA):
+            session.step(action)
+        code, reward = self.grade(session.transcript())
+        self.assertNotEqual(code, 0)
+        self.assertEqual(reward, "0\n")
 
 
 if __name__ == "__main__":

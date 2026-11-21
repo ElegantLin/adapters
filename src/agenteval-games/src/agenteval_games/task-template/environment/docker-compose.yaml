@@ -1,11 +1,16 @@
+# Merged over Harbor's base compose file, which builds and mounts `main`.
+# The sidecar shares no volume with `main`; its transcript leaves only through
+# Harbor's per-service artifact collection (see `artifacts` in task.toml).
 services:
+  main:
+    depends_on:
+      game:
+        condition: service_healthy
   game:
     build:
       context: ${CONTEXT_DIR}
       dockerfile: Dockerfile.game
     image: ${MAIN_IMAGE_NAME}_game
-    volumes:
-      - game-public:/game-public
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8080/observation',timeout=2)"]
       interval: 1s
@@ -16,25 +21,3 @@ services:
         limits:
           cpus: "0.5"
           memory: 256M
-  main:
-    build:
-      context: ${CONTEXT_DIR}
-      dockerfile: Dockerfile
-    image: ${MAIN_IMAGE_NAME}
-    command: ["sh", "-c", "sleep infinity"]
-    depends_on:
-      game:
-        condition: service_healthy
-    environment:
-      - TEST_DIR=${TEST_DIR}
-    volumes:
-      - game-public:/game-public:ro
-      - ${HOST_VERIFIER_LOGS_PATH}:${ENV_VERIFIER_LOGS_PATH}
-      - ${HOST_AGENT_LOGS_PATH}:${ENV_AGENT_LOGS_PATH}
-    deploy:
-      resources:
-        limits:
-          cpus: ${CPUS}
-          memory: ${MEMORY}
-volumes:
-  game-public:

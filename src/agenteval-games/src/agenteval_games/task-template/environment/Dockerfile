@@ -1,5 +1,4 @@
 FROM python:3.9.12-slim-bullseye@sha256:364ada4cb4f943b603d330cbb3d26f689c8b54de51cb12bad1202de7dba31814
-RUN pip install --no-cache-dir cryptography==44.0.3 cffi==1.17.1 pycparser==2.22 termcolor==2.4.0
 COPY game.py /usr/local/bin/game
 RUN chmod 755 /usr/local/bin/game
 WORKDIR /workspace

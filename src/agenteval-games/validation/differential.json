@@ -1,6 +1,6 @@
 {
   "validation": "deterministic upstream differential replay (not model parity)",
-  "python": "3.9.12 (main, May 11 2022, 08:03:15) \n[GCC 10.2.1 20210110]",
+  "python": "3.9.12 (main, May 11 2022, 10:44:44) \n[GCC 10.2.1 20210110]",
   "upstream_agentgym_commit": "3ef9235d23e68e7c2920c5422ad957dc8ced5c6c",
   "upstream_lmrl_commit": "83abeedb3a461c3d7d20572b73318a259d85f2ac",
   "pinned_source_files_verified": 15,

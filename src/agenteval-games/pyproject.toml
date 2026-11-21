@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "AgentGym AgentEval Maze and Wordle test splits for Harbor"
 readme = "README.md"
 requires-python = ">=3.11"
-dependencies = ["termcolor==2.4.0", "cryptography==44.0.3", "cffi==1.17.1", "pycparser==2.22"]
+dependencies = ["termcolor==2.4.0"]
 
 [project.scripts]
 agenteval-games = "agenteval_games.main:main"
