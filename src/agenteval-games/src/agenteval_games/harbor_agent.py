@@ -39,10 +39,11 @@ class AgentEvalNativeAgent(BaseAgent):
     def __init__(
         self,
         *args,
-        temperature: float,
-        max_tokens: int,
+        temperature: float | None,
+        max_tokens: int | None,
         request_timeout_sec: float,
-        top_p: float = 1.0,
+        top_p: float | None = 1.0,
+        extra_body: dict | None = None,
         api_base: str | None = None,
         api_key_env: str = "OPENAI_API_KEY",
         environment_timeout_sec: float = 30.0,
@@ -52,7 +53,12 @@ class AgentEvalNativeAgent(BaseAgent):
     ):
         super().__init__(*args, **kwargs)
         self._settings = ModelSettings(
-            self.model_name, temperature, max_tokens, request_timeout_sec, top_p
+            self.model_name,
+            temperature,
+            max_tokens,
+            request_timeout_sec,
+            top_p,
+            dict(extra_body or {}),
         )
         self._api_base = validate_base_url(
             api_base or os.environ.get("OPENAI_BASE_URL") or "https://api.openai.com/v1"

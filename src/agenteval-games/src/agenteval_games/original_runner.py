@@ -236,6 +236,7 @@ async def run_original(args) -> int:
         args.max_tokens,
         args.request_timeout_sec,
         args.top_p,
+        args.extra_body,
     )
     client = ChatCompletionsClient(
         settings, args.api_base, os.environ.get(args.api_key_env, "")
@@ -309,6 +310,26 @@ async def run_original(args) -> int:
         raise
 
 
+def optional(kind):
+    """Parse a number, or the word none to leave the field out of the request."""
+
+    def parse(text: str):
+        return None if text.lower() == "none" else kind(text)
+
+    parse.__name__ = kind.__name__ + " or none"
+    return parse
+
+
+def json_object(text: str) -> dict:
+    value = json.loads(text)
+    if not isinstance(value, dict):
+        raise ValueError("expected a JSON object")
+    return value
+
+
+json_object.__name__ = "JSON object"
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--upstream-dir", required=True)
@@ -320,10 +341,24 @@ def main():
     parser.add_argument(
         "--model", required=True, help="Exact provider model identifier; not rewritten"
     )
-    parser.add_argument("--temperature", type=float, required=True)
-    parser.add_argument("--max-tokens", type=int, required=True)
+    omit = "; 'none' leaves it out of the request"
+    parser.add_argument(
+        "--temperature", type=optional(float), required=True, help="0 to 2" + omit
+    )
+    parser.add_argument(
+        "--max-tokens", type=optional(int), required=True, help="positive" + omit
+    )
     parser.add_argument("--request-timeout-sec", type=float, required=True)
-    parser.add_argument("--top-p", type=float, default=1.0)
+    parser.add_argument(
+        "--top-p", type=optional(float), default=1.0, help="above 0, up to 1" + omit
+    )
+    parser.add_argument(
+        "--extra-body",
+        type=json_object,
+        default={},
+        help="JSON object of provider-specific request fields, "
+        "e.g. '{\"max_completion_tokens\": 4096}'",
+    )
     parser.add_argument("--environment-timeout-sec", type=float, default=30.0)
     parser.add_argument(
         "--episode-timeout-sec", type=float, default=DEFAULT_EPISODE_TIMEOUT_SEC

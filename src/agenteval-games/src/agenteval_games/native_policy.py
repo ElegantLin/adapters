@@ -6,7 +6,7 @@ The host owns model credentials; only raw actions reach the game container.
 """
 
 import asyncio
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 import json
 import math
@@ -43,28 +43,76 @@ def validate_base_url(value: str) -> str:
     return value.rstrip("/")
 
 
+# Request fields the policy owns; extra_body may not set or override them.
+RESERVED_FIELDS = frozenset(
+    {
+        "model",
+        "messages",
+        "temperature",
+        "max_tokens",
+        "top_p",
+        "stream",
+        "n",
+        "tools",
+        "tool_choice",
+    }
+)
+
+
 @dataclass(frozen=True)
 class ModelSettings:
+    """Request settings, identical on both sides.
+
+    temperature, max_tokens or top_p set to None is left out of the request, for
+    models that reject that field. extra_body adds provider-specific fields such
+    as max_completion_tokens or reasoning_effort.
+    """
+
     model: str
-    temperature: float
-    max_tokens: int
+    temperature: float | None
+    max_tokens: int | None
     request_timeout_sec: float
-    top_p: float = 1.0
+    top_p: float | None = 1.0
+    extra_body: dict[str, Any] = field(default_factory=dict)
 
     def __post_init__(self):
         if not isinstance(self.model, str) or not self.model.strip():
             raise ValueError("An exact model identifier is required")
-        if type(self.max_tokens) is not int or self.max_tokens <= 0:
+        if self.max_tokens is not None and (
+            type(self.max_tokens) is not int or self.max_tokens <= 0
+        ):
             raise ValueError("max_tokens must be a positive integer")
         for name, value, low, high in (
             ("temperature", self.temperature, 0, 2),
             ("top_p", self.top_p, 0, 1),
             ("request_timeout_sec", self.request_timeout_sec, 0, float("inf")),
         ):
+            if value is None and name != "request_timeout_sec":
+                continue
             if not isinstance(value, (int, float)) or not math.isfinite(value):
                 raise ValueError(name + " must be finite")
             if value < low or value > high or (name != "temperature" and value == 0):
                 raise ValueError("Invalid " + name)
+        if not isinstance(self.extra_body, dict) or not all(
+            isinstance(key, str) for key in self.extra_body
+        ):
+            raise ValueError("extra_body must be a JSON object")
+        reserved = RESERVED_FIELDS.intersection(self.extra_body)
+        if reserved:
+            raise ValueError("extra_body cannot set " + ", ".join(sorted(reserved)))
+        try:
+            json.dumps(self.extra_body, allow_nan=False)
+        except (TypeError, ValueError):
+            raise ValueError("extra_body must be JSON-serializable") from None
+
+    def request_body(self, messages: list[dict[str, str]]) -> dict[str, Any]:
+        body: dict[str, Any] = {"model": self.model, "messages": messages}
+        for name in ("temperature", "max_tokens", "top_p"):
+            value = getattr(self, name)
+            if value is not None:
+                body[name] = value
+        body.update(self.extra_body)
+        return body
 
 
 class ProtocolError(RuntimeError):
@@ -105,17 +153,10 @@ class ChatCompletionsClient:
         self._api_key = api_key
 
     async def complete(self, messages: list[dict[str, str]]) -> dict[str, Any]:
-        payload = {
-            "model": self.settings.model,
-            "messages": messages,
-            "temperature": self.settings.temperature,
-            "max_tokens": self.settings.max_tokens,
-            "top_p": self.settings.top_p,
-        }
         result = await asyncio.to_thread(
             request_json,
             self.base_url + "/chat/completions",
-            payload=payload,
+            payload=self.settings.request_body(messages),
             timeout=self.settings.request_timeout_sec,
             api_key=self._api_key,
         )

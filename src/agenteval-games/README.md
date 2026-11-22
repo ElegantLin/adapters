@@ -165,7 +165,7 @@ Run deterministic checks without model API calls:
 ```bash
 # Lightweight checks; optional Harbor/upstream integration checks may be skipped.
 uv run python -m unittest discover -s tests -v
-# All 24 tests, with the pinned Harbor environment and upstream checkout available.
+# All 26 tests, with the pinned Harbor environment and upstream checkout available.
 AGENTEVAL_UPSTREAM_DIR=/path/to/AgentGym /tmp/agenteval-harbor/bin/python -m unittest discover -s tests -v
 # Independent, pinned Python 3.9.12 comparison with the original implementation.
 bash scripts/run_upstream_check.sh
@@ -181,7 +181,7 @@ uv run python scripts/check_native_original.py \
   --run-name original-native-smoke-01
 ```
 
-The complete unit/integration suite passed **24/24 with no skips**. A separate
+The complete unit/integration suite passed **26/26 with no skips**. A separate
 real Harbor/Docker smoke test also exercised the native agent on one Maze and one
 Wordle task using a **local mock model endpoint**, achieving 2/2 successful
 reference episodes with no exceptions ([results](validation/harbor-native-smoke.json)).
@@ -208,6 +208,13 @@ environment as Harbor and fill in `parity_agenteval-games.yaml`. Its model name 
 a deliberate placeholder; its numeric values are examples, not approved settings.
 The API key stays on the host via `OPENAI_API_KEY`; `OPENAI_BASE_URL` optionally
 selects an OpenAI-compatible endpoint. Use identical values on both sides.
+
+Some models reject one of the default request fields. Set `temperature`,
+`max_tokens` or `top_p` to `null` (`none` on the original-side command line)
+to leave that field out of the request, and pass provider-specific fields such
+as `max_completion_tokens` through `extra_body` (`--extra-body` with a JSON
+object). The same shared code builds the request on both sides, and each
+report records the effective settings.
 
 ```bash
 # Harbor native conversation side; model calls are billable.

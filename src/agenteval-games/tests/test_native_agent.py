@@ -347,6 +347,7 @@ class HTTPTests(unittest.IsolatedAsyncioTestCase):
                     max_tokens=SETTINGS.max_tokens,
                     request_timeout_sec=SETTINGS.request_timeout_sec,
                     top_p=SETTINGS.top_p,
+                    extra_body={},
                     api_base=url + "/v1",
                     api_key_env="TEST_AGENT_EVAL_KEY",
                     environment_base_url=url,
@@ -414,6 +415,66 @@ class HTTPTests(unittest.IsolatedAsyncioTestCase):
                 report["usage"],
                 {"input_tokens": 9, "output_tokens": 4, "cache_tokens": 2},
             )
+
+    async def test_omitted_and_provider_specific_request_fields(self):
+        settings = ModelSettings(
+            "test-provider/reasoning-model",
+            None,
+            None,
+            5.0,
+            None,
+            {"max_completion_tokens": 77, "reasoning_effort": "low"},
+        )
+        messages = initial_messages("maze", "initial")
+        with http_server() as (server, url):
+            client = ChatCompletionsClient(settings, url + "/v1", "test-only-key")
+            await client.complete(messages)
+            self.assertEqual(
+                server.model_requests,
+                [
+                    {
+                        "model": settings.model,
+                        "messages": messages,
+                        "max_completion_tokens": 77,
+                        "reasoning_effort": "low",
+                    }
+                ],
+            )
+        self.assertEqual(
+            new_report(settings, "harbor")["settings"]["extra_body"],
+            {"max_completion_tokens": 77, "reasoning_effort": "low"},
+        )
+        # Only top_p is dropped; the other fields keep their explicit values.
+        self.assertEqual(
+            ModelSettings("m", 0, 64, 5.0, None).request_body(messages),
+            {"model": "m", "messages": messages, "temperature": 0, "max_tokens": 64},
+        )
+        for extra_body in (
+            {"messages": []},
+            {"max_tokens": 5},
+            {"tools": []},
+            {"bad": float("nan")},
+            {1: "non-string key"},
+            ["not", "an", "object"],
+        ):
+            with self.assertRaises(ValueError):
+                ModelSettings("m", 0, 64, 5.0, 1.0, extra_body)
+        with self.assertRaises(ValueError):
+            ModelSettings("m", 0, 64, None)
+
+    def test_original_runner_parses_omitted_fields(self):
+        from agenteval_games.original_runner import json_object, optional
+
+        self.assertIsNone(optional(float)("none"))
+        self.assertIsNone(optional(int)("None"))
+        self.assertEqual(optional(float)("0"), 0.0)
+        self.assertEqual(optional(int)("2048"), 2048)
+        self.assertEqual(
+            json_object('{"reasoning_effort": "low"}'), {"reasoning_effort": "low"}
+        )
+        for text in ("[]", "not json"):
+            with self.assertRaises(ValueError):
+                json_object(text)
 
     async def test_wordle_prompt_ignores_server_greeting(self):
         from agenteval_games.original_runner import DATA_DIR
