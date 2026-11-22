@@ -7,10 +7,10 @@
   "paid_model_calls": 0,
   "job_result": {
     "schema_version": 1,
-    "id": "f85f5ea4-7e58-40b2-bd48-ed464f8b1d49",
-    "started_at": "2026-11-20T20:02:24.760260",
-    "updated_at": "2026-11-20T20:03:21.781014",
-    "finished_at": "2026-11-20T20:03:21.781014",
+    "id": "16ca5c83-c078-4803-bce6-b0cc10cce35d",
+    "started_at": "2026-11-21T16:24:19.046070",
+    "updated_at": "2026-11-21T16:25:04.812915",
+    "finished_at": "2026-11-21T16:25:04.812915",
     "n_total_trials": 2,
     "stats": {
       "n_completed_trials": 2,
@@ -32,8 +32,8 @@
           "reward_stats": {
             "reward": {
               "1.0": [
-                "agenteval-maze-00__YRkB7Jw",
-                "agenteval-wordle-00__2mj3N93"
+                "agenteval-maze-00__QEwJN7N",
+                "agenteval-wordle-00__K8Wjuxu"
               ]
             }
           },
@@ -48,10 +48,10 @@
   },
   "trials": [
     {
-      "id": "c0ae4cae-8f58-40b0-bcf6-504e7ce113c8",
+      "id": "7e6ea74b-f34f-4cf3-87b3-1c3c4d4cbf0a",
       "task_name": "agentgym/agenteval-maze-00",
-      "trial_name": "agenteval-maze-00__YRkB7Jw",
-      "task_checksum": "9001a1884e3f2f583f7cbd6952093be88e9cffed0dfd0fea7bdfab733d0f95a5",
+      "trial_name": "agenteval-maze-00__QEwJN7N",
+      "task_checksum": "9623afba450fa30cb407c192d3a331674f15180c91fc6e63a7715e6b6d385b11",
       "verifier_environment_mode": "separate",
       "verifier_result": {
         "rewards": {
@@ -59,8 +59,8 @@
         }
       },
       "exception_info": null,
-      "started_at": "2026-11-21T04:02:24.837506Z",
-      "finished_at": "2026-11-21T04:03:18.913085Z",
+      "started_at": "2026-11-22T00:24:19.106076Z",
+      "finished_at": "2026-11-22T00:25:04.807885Z",
       "transcript_artifact": {
         "source": "/game-evidence/transcript.json",
         "service": "game",
@@ -70,10 +70,10 @@
       }
     },
     {
-      "id": "375aaf61-907e-4cef-944f-e4b3c5a2d8fc",
+      "id": "c5d3d932-d996-4b7e-a7d0-3ae285a9313c",
       "task_name": "agentgym/agenteval-wordle-00",
-      "trial_name": "agenteval-wordle-00__2mj3N93",
-      "task_checksum": "c5709ffff01f5472609f980c240c1b38fc792e08762c8f3d1e10e6c1f54a68df",
+      "trial_name": "agenteval-wordle-00__K8Wjuxu",
+      "task_checksum": "7bdf469ef6bcf37d575c72de5d537455c6bd243bd9c1f0955c7edaa9003d0554",
       "verifier_environment_mode": "separate",
       "verifier_result": {
         "rewards": {
@@ -81,8 +81,8 @@
         }
       },
       "exception_info": null,
-      "started_at": "2026-11-21T04:02:24.900336Z",
-      "finished_at": "2026-11-21T04:03:21.773452Z",
+      "started_at": "2026-11-22T00:24:19.160575Z",
+      "finished_at": "2026-11-22T00:25:03.208128Z",
       "transcript_artifact": {
         "source": "/game-evidence/transcript.json",
         "service": "game",

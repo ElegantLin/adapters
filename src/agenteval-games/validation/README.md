@@ -23,6 +23,10 @@ Docker backend, with grading in the separate verifier environment.
 - `harbor-native-smoke.json`: Maze 00 and Wordle 00 through the native Harbor
   agent using a local mock Chat Completions service that replays reference
   actions. It validates transport and conversation wiring, not model ability.
+- `original-native-smoke.json`: the same two tasks through the original-side
+  runner against the unmodified upstream `lmrlgym` server (built from
+  `scripts/Dockerfile.original`), with the same mock service and reference
+  actions. It validates the original-side protocol end to end, not model ability.
 - `oracle-terminal.txt` and `oracle-terminal.svg`: captured Harbor terminal
   output of the oracle job and a rendering of that text for the PR. Harbor's
   trailing hints, which only print local job-directory paths, are omitted.
@@ -63,6 +67,21 @@ harbor run -p /tmp/agenteval-wrong -a oracle \
 In each trial directory, `artifacts/manifest.json` records the transcript as
 collected from the `game` service, and `artifacts/game-evidence/transcript.json`
 is the exact file the verifier replayed.
+
+Run the two mock-model wiring checks, one per side. Neither contacts a model
+provider. The original-side check needs the upstream server running; see the
+main README for the checkout and `docker build` commands:
+
+```bash
+uv run python scripts/check_native_harbor.py \
+  --harbor /tmp/agenteval-harbor/bin/harbor --dataset-dir /tmp/agenteval-generated \
+  --jobs-dir /tmp/agenteval-harbor-jobs --job-name agenteval-native-smoke-01
+docker run --rm -d -p 127.0.0.1:36001:36001 agenteval-original-server
+uv run python scripts/check_native_original.py \
+  --upstream-dir /path/to/AgentGym --environment-base-url http://127.0.0.1:36001 \
+  --dataset-dir /tmp/agenteval-generated --output-dir /tmp/agenteval-original-smoke \
+  --run-name original-native-smoke-01
+```
 
 Harbor's static task checks report no findings on any of the 50 generated tasks
 with the default rules. Its Compose checks need a recent Docker Compose plugin:

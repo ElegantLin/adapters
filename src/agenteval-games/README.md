@@ -105,8 +105,8 @@ Or generate into `datasets/agenteval-games` and use the checked-in reference con
 harbor run -c src/agenteval-games/run_agenteval-games.yaml
 ```
 
-On November 20, 2026, the full oracle run completed **50/50 tasks with reward 1**
-(mean 1.000, zero exceptions, zero retries) in 9 minutes 44 seconds on Harbor
+On November 21, 2026, the full oracle run completed **50/50 tasks with reward 1**
+(mean 1.000, zero exceptions, zero retries) in 9 minutes 31 seconds on Harbor
 0.26.0, with every trial graded in the separate verifier environment. Two
 negative controls on one task from each game returned **0 on both**: a
 no-action agent, and a known-wrong submission that loses the real episode and
@@ -173,6 +173,12 @@ bash scripts/run_upstream_check.sh
 uv run python scripts/check_native_harbor.py \
   --harbor /tmp/agenteval-harbor/bin/harbor --dataset-dir /tmp/agenteval-games \
   --jobs-dir /tmp/agenteval-harbor-jobs --job-name native-smoke-01
+# The same mock model through the original-side runner and the real upstream
+# server (start that server first; see the original-side instructions below).
+uv run python scripts/check_native_original.py \
+  --upstream-dir /path/to/AgentGym --environment-base-url http://127.0.0.1:36001 \
+  --dataset-dir /tmp/agenteval-games --output-dir /tmp/agenteval-original-smoke \
+  --run-name original-native-smoke-01
 ```
 
 The complete unit/integration suite passed **24/24 with no skips**. A separate
@@ -183,6 +189,12 @@ This validates native-agent wiring and
 failure recording, not a model's capability or model parity. The smoke script
 requires a fresh job name and records its configuration, mock requests, and
 assertion result beside the Harbor job directory.
+
+The original-side counterpart drove the same two tasks through
+`agenteval_games.original_runner` against the unmodified upstream `lmrlgym`
+server with the same mock endpoint and reference actions, also achieving 2/2
+([results](validation/original-native-smoke.json)). Both sides issued the same
+15 model requests. Like the Harbor check, this shows wiring only.
 
 The independent checker loads the pinned original game implementations and
 AgentGym wrappers, compares initial prompts and step responses, and exercises
@@ -203,10 +215,30 @@ selects an OpenAI-compatible endpoint. Use identical values on both sides.
 ```
 
 For the original side, check out AgentGym at the commit below, initialize its
-pinned LMRL-Gym submodule, and follow the original
-[environment setup instructions](https://github.com/WooooDyy/AgentGym/blob/3ef9235d23e68e7c2920c5422ad957dc8ced5c6c/agentenv-lmrlgym/README.md).
-Start the unmodified upstream `lmrlgym --host 127.0.0.1 --port 36001` server from
-that Python 3.9.12 environment. Then run the shared native policy from this adapter:
+pinned LMRL-Gym submodule, and start the unmodified upstream `lmrlgym` server
+from a Python 3.9.12 environment. `scripts/Dockerfile.original` builds one:
+
+```bash
+git clone https://github.com/WooooDyy/AgentGym.git /path/to/AgentGym
+git -C /path/to/AgentGym checkout --detach 3ef9235d23e68e7c2920c5422ad957dc8ced5c6c
+git -C /path/to/AgentGym submodule update --init agentenv-lmrlgym/lmrlgym
+docker build -f scripts/Dockerfile.original -t agenteval-original-server \
+  /path/to/AgentGym/agentenv-lmrlgym
+docker run --rm -p 127.0.0.1:36001:36001 agenteval-original-server
+```
+
+The upstream
+[setup instructions](https://github.com/WooooDyy/AgentGym/blob/3ef9235d23e68e7c2920c5422ad957dc8ced5c6c/agentenv-lmrlgym/README.md)
+no longer install as written: `lmrlgym/requirements.txt` pins `jaxlib==0.4.7`,
+which PyPI has stopped serving, and its unpinned transitive dependencies now
+resolve to releases without Python 3.9 support. The image therefore installs
+only the packages the Maze and Wordle servers import, at upstream's pins where
+it has them, and copies the upstream sources unchanged. The complete
+requirements file can still be installed on x86-64 by adding
+`-f https://storage.googleapis.com/jax-releases/jax_releases.html` and
+constraining `spacy<3.8`, but that `jaxlib` build needs AVX and does not run
+under x86 emulation on Apple Silicon. Then run the shared native policy from
+this adapter:
 
 ```bash
 uv run python -m agenteval_games.original_runner \
@@ -256,9 +288,13 @@ uploads, a parity fork/PR, dataset PR, and registry publication do not exist yet
   original role messages and observation text, without transport instructions.
 - Source/runtime pins: AgentGym `3ef9235d23e68e7c2920c5422ad957dc8ced5c6c`,
   LMRL-Gym `83abeedb3a461c3d7d20572b73318a259d85f2ac`, AgentEval
-  `1f090d52ef01a83a889da02699e34a500e35a274`, Python **3.9.12** inside tasks,
-  and Harbor **0.26.0**. The Python base image is digest-pinned in all three
-  Dockerfiles (agent, sidecar, verifier). Adapter generation uses Python 3.11+.
+  `1f090d52ef01a83a889da02699e34a500e35a274`, Python **3.9.12** for the game
+  sidecar and verifier, and Harbor **0.26.0**. All three task images are
+  digest-pinned. Adapter generation uses Python 3.11+.
+- The agent image only carries the `game` client, so it does not use the
+  benchmark's Python. It is based on Debian 12 (`python:3.12-slim-bookworm`)
+  because Harbor's installed agents set themselves up with `apt-get`, which
+  fails on the end-of-life Debian 11 base of the Python 3.9.12 image.
 - Exclusions: all other AgentGym environments, their training splits, and any
   expanded/randomized Maze or Wordle instances. The two selected test splits
   themselves are complete; no task was dropped or sampled.
