@@ -1,4 +1,4 @@
-  50/50 Mean: 1.000 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 0:09:30 0:00:00
+  50/50 Mean: 1.000 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 0:09:45 0:00:00
 agenteval-generated • oracle
 ┏━━━━━━━━┳━━━━━━━━━━━━┳━━━━━━━┓
 ┃ Trials ┃ Exceptions ┃  Mean ┃
@@ -13,4 +13,4 @@ agenteval-generated • oracle
 └────────┴───────┘
 
 Job Info
-Total runtime: 9m 31s
+Total runtime: 9m 45s

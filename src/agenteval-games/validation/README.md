@@ -1,9 +1,10 @@
 # Engineering validation
 
-These artifacts are implementation checks, **not model parity**. No paid model
-API calls were made. Every file here was regenerated from the committed
-sources. The Harbor jobs ran on Harbor 0.26.0 (the PyPI release) with the local
-Docker backend, with grading in the separate verifier environment.
+Except for the two `parity-*.json` files described at the end of the list, these
+artifacts are implementation checks, **not model parity**, and no model API
+calls were made to produce them. The Harbor jobs ran on Harbor 0.27.0 (the PyPI
+release) with the local Docker backend, with grading in the separate verifier
+environment.
 
 - `differential.json`: the pinned original AgentGym clients, wrappers and
   LMRL-Gym implementations compared with the adapter: 50 tasks, 350 scenarios,
@@ -30,8 +31,16 @@ Docker backend, with grading in the separate verifier environment.
 - `oracle-terminal.txt` and `oracle-terminal.svg`: captured Harbor terminal
   output of the oracle job and a rendering of that text for the PR. Harbor's
   trailing hints, which only print local job-directory paths, are omitted.
+- `parity-compare.json`: output of `scripts/parity_compare.py` on the three
+  parity runs per side: per-run scores, mean ± sample SEM and the range-overlap
+  result, for all 50 tasks and per game. These come from real model runs; the
+  main README describes how the model was called.
+- `parity-cross-replay.json`: output of `scripts/cross_replay.py` on the same
+  six runs. Every reply recorded on one side was replayed through the other
+  side's environment without calling a model: 300 episodes, 1,537 steps, no
+  mismatches.
 
-After installing Harbor 0.26.0 and this adapter as described in the main README,
+After installing Harbor 0.27.0 and this adapter as described in the main README,
 generate and run the full oracle job:
 
 ```bash
@@ -92,5 +101,5 @@ harbor lint /tmp/agenteval-generated/*
 
 Job timestamps are preserved exactly as emitted by Harbor. Trial configuration,
 host paths, and environment variables are not included in the selected per-trial
-fields. The original full job directories remain local to the execution host;
-these are not Harbor Hub or Hugging Face publication records.
+fields. The full parity and oracle job directories are published with the
+parity artifacts linked from the main README.

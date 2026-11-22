@@ -1,16 +1,16 @@
 {
   "schema_version": 2,
   "purpose": "Negative control: a known-wrong submission that loses the real episode, then plants a winning transcript and reward files in the agent container, must receive zero reward. Only solution/ differs from the oracle tasks (scripts/make_wrong_submission.py).",
-  "harbor_version": "0.26.0",
-  "harbor_source": "PyPI harbor==0.26.0",
+  "harbor_version": "0.27.0",
+  "harbor_source": "PyPI harbor==0.27.0",
   "job_name": "agenteval-wrong-submission-01",
   "paid_model_calls": 0,
   "job_result": {
     "schema_version": 1,
-    "id": "94589723-71a5-4d40-92ac-968f8bd4ff29",
-    "started_at": "2026-11-21T16:23:27.564828",
-    "updated_at": "2026-11-21T16:24:14.930781",
-    "finished_at": "2026-11-21T16:24:14.930781",
+    "id": "48872a46-923e-4b45-a7d7-abb0ad87501e",
+    "started_at": "2026-11-21T20:28:47.133307",
+    "updated_at": "2026-11-21T20:29:41.524463",
+    "finished_at": "2026-11-21T20:29:41.524463",
     "n_total_trials": 2,
     "stats": {
       "n_completed_trials": 2,
@@ -32,8 +32,8 @@
           "reward_stats": {
             "reward": {
               "0.0": [
-                "agenteval-maze-00__bi2FJDo",
-                "agenteval-wordle-00__rALUsWt"
+                "agenteval-maze-00__HmTynQE",
+                "agenteval-wordle-00__xUNcyNU"
               ]
             }
           },
@@ -48,9 +48,9 @@
   },
   "trials": [
     {
-      "id": "81b2e2ab-7ed7-4b96-8c61-a8b467d23aaa",
+      "id": "0882c90a-70b4-4125-8774-e44508db83d0",
       "task_name": "agentgym/agenteval-maze-00",
-      "trial_name": "agenteval-maze-00__bi2FJDo",
+      "trial_name": "agenteval-maze-00__HmTynQE",
       "task_checksum": "791a292fbf3c3c0a8fd6e45dee7d92d4a256ad4c94cee4835f0de4a996c48ba5",
       "verifier_environment_mode": "separate",
       "verifier_result": {
@@ -59,8 +59,8 @@
         }
       },
       "exception_info": null,
-      "started_at": "2026-11-22T00:23:27.642953Z",
-      "finished_at": "2026-11-22T00:24:09.379954Z",
+      "started_at": "2026-11-22T04:28:47.208642Z",
+      "finished_at": "2026-11-22T04:29:33.526868Z",
       "transcript_artifact": {
         "source": "/game-evidence/transcript.json",
         "service": "game",
@@ -70,9 +70,9 @@
       }
     },
     {
-      "id": "232104f4-2e5c-407f-9ce5-9c1437d69ff5",
+      "id": "cc4451a1-5849-4f46-8fdc-fec0cc6d5755",
       "task_name": "agentgym/agenteval-wordle-00",
-      "trial_name": "agenteval-wordle-00__rALUsWt",
+      "trial_name": "agenteval-wordle-00__xUNcyNU",
       "task_checksum": "16741014dac8be83bad42e0f6d61f706afc53924a4acc7d28e6446a559144da4",
       "verifier_environment_mode": "separate",
       "verifier_result": {
@@ -81,8 +81,8 @@
         }
       },
       "exception_info": null,
-      "started_at": "2026-11-22T00:23:27.708696Z",
-      "finished_at": "2026-11-22T00:24:14.924675Z",
+      "started_at": "2026-11-22T04:28:47.282702Z",
+      "finished_at": "2026-11-22T04:29:41.522651Z",
       "transcript_artifact": {
         "source": "/game-evidence/transcript.json",
         "service": "game",

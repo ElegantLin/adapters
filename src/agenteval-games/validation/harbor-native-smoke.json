@@ -1,16 +1,16 @@
 {
   "schema_version": 2,
   "purpose": "Native Harbor agent with a local mock Chat Completions endpoint returning reference actions. No real model was called; not model parity.",
-  "harbor_version": "0.26.0",
-  "harbor_source": "PyPI harbor==0.26.0",
+  "harbor_version": "0.27.0",
+  "harbor_source": "PyPI harbor==0.27.0",
   "job_name": "agenteval-native-smoke-01",
   "paid_model_calls": 0,
   "job_result": {
     "schema_version": 1,
-    "id": "16ca5c83-c078-4803-bce6-b0cc10cce35d",
-    "started_at": "2026-11-21T16:24:19.046070",
-    "updated_at": "2026-11-21T16:25:04.812915",
-    "finished_at": "2026-11-21T16:25:04.812915",
+    "id": "e9467acc-acf4-4b9b-aaf9-00293e570d82",
+    "started_at": "2026-11-21T20:29:46.201973",
+    "updated_at": "2026-11-21T20:30:38.567138",
+    "finished_at": "2026-11-21T20:30:38.567138",
     "n_total_trials": 2,
     "stats": {
       "n_completed_trials": 2,
@@ -32,8 +32,8 @@
           "reward_stats": {
             "reward": {
               "1.0": [
-                "agenteval-maze-00__QEwJN7N",
-                "agenteval-wordle-00__K8Wjuxu"
+                "agenteval-maze-00__smXdN2N",
+                "agenteval-wordle-00__gXx4ZBH"
               ]
             }
           },
@@ -48,9 +48,9 @@
   },
   "trials": [
     {
-      "id": "7e6ea74b-f34f-4cf3-87b3-1c3c4d4cbf0a",
+      "id": "918799e8-91b2-4f89-9ac2-34a80cf82328",
       "task_name": "agentgym/agenteval-maze-00",
-      "trial_name": "agenteval-maze-00__QEwJN7N",
+      "trial_name": "agenteval-maze-00__smXdN2N",
       "task_checksum": "9623afba450fa30cb407c192d3a331674f15180c91fc6e63a7715e6b6d385b11",
       "verifier_environment_mode": "separate",
       "verifier_result": {
@@ -59,8 +59,8 @@
         }
       },
       "exception_info": null,
-      "started_at": "2026-11-22T00:24:19.106076Z",
-      "finished_at": "2026-11-22T00:25:04.807885Z",
+      "started_at": "2026-11-22T04:29:46.268430Z",
+      "finished_at": "2026-11-22T04:30:38.565133Z",
       "transcript_artifact": {
         "source": "/game-evidence/transcript.json",
         "service": "game",
@@ -70,9 +70,9 @@
       }
     },
     {
-      "id": "c5d3d932-d996-4b7e-a7d0-3ae285a9313c",
+      "id": "bfcac21f-810a-4efb-8a08-7050b934d07b",
       "task_name": "agentgym/agenteval-wordle-00",
-      "trial_name": "agenteval-wordle-00__K8Wjuxu",
+      "trial_name": "agenteval-wordle-00__gXx4ZBH",
       "task_checksum": "7bdf469ef6bcf37d575c72de5d537455c6bd243bd9c1f0955c7edaa9003d0554",
       "verifier_environment_mode": "separate",
       "verifier_result": {
@@ -81,8 +81,8 @@
         }
       },
       "exception_info": null,
-      "started_at": "2026-11-22T00:24:19.160575Z",
-      "finished_at": "2026-11-22T00:25:03.208128Z",
+      "started_at": "2026-11-22T04:29:46.332763Z",
+      "finished_at": "2026-11-22T04:30:31.629193Z",
       "transcript_artifact": {
         "source": "/game-evidence/transcript.json",
         "service": "game",
@@ -93,6 +93,36 @@
     }
   ],
   "mock_requests": [
+    {
+      "game": "wordle",
+      "turn": 1,
+      "action": "p a n i c",
+      "initial_roles": [
+        "user",
+        "assistant",
+        "user"
+      ]
+    },
+    {
+      "game": "wordle",
+      "turn": 2,
+      "action": "s o l a r",
+      "initial_roles": [
+        "user",
+        "assistant",
+        "user"
+      ]
+    },
+    {
+      "game": "wordle",
+      "turn": 3,
+      "action": "a r o m a",
+      "initial_roles": [
+        "user",
+        "assistant",
+        "user"
+      ]
+    },
     {
       "game": "maze",
       "turn": 1,
@@ -207,36 +237,6 @@
       "game": "maze",
       "turn": 12,
       "action": "move down",
-      "initial_roles": [
-        "user",
-        "assistant",
-        "user"
-      ]
-    },
-    {
-      "game": "wordle",
-      "turn": 1,
-      "action": "p a n i c",
-      "initial_roles": [
-        "user",
-        "assistant",
-        "user"
-      ]
-    },
-    {
-      "game": "wordle",
-      "turn": 2,
-      "action": "s o l a r",
-      "initial_roles": [
-        "user",
-        "assistant",
-        "user"
-      ]
-    },
-    {
-      "game": "wordle",
-      "turn": 3,
-      "action": "a r o m a",
       "initial_roles": [
         "user",
         "assistant",

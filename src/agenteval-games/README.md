@@ -8,11 +8,11 @@ tasks. These are two selected splits, not the full AgentGym suite. The adapter
 preserves the published test IDs, original instructions, seeded game behavior,
 action parsing, and final-step reward.
 
-Status: **WIP**. All 50 reference solutions passed through the real Harbor/Docker
-harness with zero exceptions, graded by a separate verifier on Harbor 0.26.0.
-Model parity, Harbor team review, and dataset registration remain pending. The
-empty `parity_experiment.json` records that no model experiment has been run; it
-must not be interpreted as a passing parity result.
+All 50 reference solutions passed through the real Harbor/Docker harness with
+zero exceptions, graded by a separate verifier on Harbor 0.27.0. Parity ran on
+all 50 tasks with three runs per side: 100.00 ± 0.00 on the original side and
+100.00 ± 0.00 on Harbor (see the parity section for how the model was called
+and why the scores are supplemented with a replay check).
 
 ## What is AgentEval Games?
 
@@ -48,7 +48,7 @@ at most six guesses.
   feedback. They do not require access to the next random target.
 - The terminal transport supports standard Harbor agents. A native conversation
   agent and original-side runner preserve AgentGym's user/assistant initialization
-  and action/observation dialogue for coordinated model parity.
+  and action/observation dialogue for model parity.
 
 ## Generated Task Structure
 
@@ -89,9 +89,13 @@ copy at `artifacts/game-evidence/transcript.json` in the trial directory.
 
 ## Run Evaluation / Harness
 
-Registry evaluation is not available until the Harbor team publishes the dataset.
-The intended registry name is `agentgym/agenteval-games`; no registry version is
-claimed by this PR.
+Registry evaluation becomes available once the Harbor team publishes the dataset
+([dataset PR](https://github.com/harbor-framework/harbor-datasets/pull/290)). The
+registry name is `agentgym/agenteval-games`, with the requested tag `v1.0`:
+
+```bash
+harbor run -d agentgym/agenteval-games -a oracle
+```
 
 For local oracle verification, from the adapters repository root:
 
@@ -106,8 +110,8 @@ harbor run -c src/agenteval-games/run_agenteval-games.yaml
 ```
 
 On November 21, 2026, the full oracle run completed **50/50 tasks with reward 1**
-(mean 1.000, zero exceptions, zero retries) in 9 minutes 31 seconds on Harbor
-0.26.0, with every trial graded in the separate verifier environment. Two
+(mean 1.000, zero exceptions, zero retries) in 9 minutes 45 seconds on Harbor
+0.27.0, with every trial graded in the separate verifier environment. Two
 negative controls on one task from each game returned **0 on both**: a
 no-action agent, and a known-wrong submission that loses the real episode and
 then plants a winning transcript and reward files inside the agent container.
@@ -121,7 +125,7 @@ See [full oracle results](validation/harbor-oracle.json),
 Each task requires Docker Compose because the private game service must remain
 outside the agent container, and a Harbor release that supports separate
 verifiers and per-service (`service = ...`) artifact collection. The tasks are
-validated on Harbor 0.26.0 with the local Docker backend; single-container and
+validated on Harbor 0.27.0 with the local Docker backend; single-container and
 cloud backends have not been validated. A task does not require a GPU or a
 model-based judge.
 
@@ -149,23 +153,82 @@ selects the first two Maze tasks rather than a balanced sample.
 
 ## Comparison with Original Benchmark (Parity)
 
-**No model parity has been run.** Agents, exact model IDs, temperature, generation
-limits, number of runs, and API provisioning must be coordinated with the Harbor
-team first. The required sequence is a 5–10-task sanity check on both sides, one
-full 50-task run on both sides, then at least two total runs per side (three
-preferred). Report each side's mean ± sample SEM and raw run arrays. Deterministic
-replay and oracle success are engineering checks, not model parity.
+Parity ran on **all 50 tasks with three full runs per side**. Both sides scored
+100% in every run, so the run-score ranges overlap.
 
 | Agent | Model | Metric | Runs | Dataset Size | Original (mean ± SEM) | Harbor (mean ± SEM) |
 |-------|-------|--------|------|--------------|-----------------------|---------------------|
-| Pending coordination | Not selected | final-step reward | 0 | 50 planned | Not run | Not run |
+| agenteval-native@0.1.0 | gpt-6.1-astra | final-step reward (%) | 3 | 50 (100%) | 100.00 ± 0.00 | 100.00 ± 0.00 |
+
+Per game, both sides scored 100.00 ± 0.00 on Maze (25 tasks) and on Wordle (25
+tasks). The raw run scores are in `parity_experiment.json`; the per-game
+breakdown is in [validation/parity-compare.json](validation/parity-compare.json).
+
+**What was compared.** AgentGym drives a chat model through its own conversation
+loop and has no Harbor-compatible CLI agent, so this is a custom-agent parity.
+One conversation policy, `agenteval_games.native_policy`, runs on both sides: as
+`AgentEvalNativeAgent` on Harbor 0.27.0, and as `agenteval_games.original_runner`
+against the unmodified upstream `lmrlgym` server. Both send the original role
+message, acknowledgement and observations, with no transport instructions. The
+runs followed the required order: a sanity check on 5 Maze and 5 Wordle tasks
+per side (10/10 on both; that check ran on Harbor 0.26.0, the full runs on
+0.27.0), one full run per side, then two more per side.
+
+**How the model was called.** `gpt-6.1-astra` was reachable only through the
+Codex CLI (codex-cli 0.171.0) on a private gateway. Both sides therefore sent
+their chat requests to `scripts/codex_chat_bridge.py`, which answers each
+request with one `codex exec` call at reasoning effort `medium`. The following
+applies equally to both sides:
+
+- Codex's own system prompt and a short instruction to reply as the assistant
+  precede the conversation.
+- `temperature`, `max_tokens` and `top_p` cannot be set on this route, so the
+  runs omit them.
+- The model ID is not a dated identifier. The gateway serves the model under an
+  internal alias, which the uploaded logs show as `<gateway-model-alias>`.
+- Codex had no built-in metadata for the gateway's name for this model and ran
+  with its fallback model settings.
+- The six runs made 1,537 model calls with no failures, and Codex executed no
+  commands in any of them. They used 32.5M input and 0.07M output tokens.
+
+These scores are therefore not comparable to published AgentGym results, which
+were obtained through a plain chat API.
+
+**Scores at the ceiling.** Matching 100% scores satisfy the range-overlap rule
+but cannot by themselves reveal a small divergence. As a model-free supplement,
+`scripts/cross_replay.py` replayed every reply recorded on the original side
+through this adapter's game engine, and every reply recorded on the Harbor side
+through the upstream server. Across 300 episodes and 1,537 steps, every
+observation, reward and termination flag matched
+([validation/parity-cross-replay.json](validation/parity-cross-replay.json)).
+The replays are less varied than their count suggests: in Maze the model took
+the same path in all six runs of every task (25 distinct action sequences),
+while its Wordle guesses varied (56 distinct sequences over the 25 tasks).
+Invalid, exhausted and truncated episodes, which this model never produced, are
+covered by the deterministic comparison below.
+
+**Standard agent.** To show that the tasks work with a standard CLI agent,
+Harbor's built-in `codex@0.171.0` played all 50 tasks once with the same model
+through the terminal `game` client and scored 50/50 at reward 1.0, with no
+errors or retries. This run is on the Harbor side only and is not a parity
+comparison.
+
+Links: [original benchmark](https://github.com/WooooDyy/AgentGym/tree/3ef9235d23e68e7c2920c5422ad957dc8ced5c6c)
+(no fork; the original-side runner is part of this adapter),
+[adapter PR](https://github.com/harbor-index/adapters/pull/20),
+[dataset PR](https://github.com/harbor-framework/harbor-datasets/pull/290),
+[parity artifacts PR](https://huggingface.co/datasets/harborframework/parity-experiments/discussions/296).
+That Hugging Face repository currently rejects new files because it is over the
+Hub's file-count limit, so the artifacts are mirrored at
+[zodi1121/agenteval-games-parity-experiments](https://huggingface.co/datasets/zodi1121/agenteval-games-parity-experiments)
+until they can be pushed to the PR.
 
 Run deterministic checks without model API calls:
 
 ```bash
 # Lightweight checks; optional Harbor/upstream integration checks may be skipped.
 uv run python -m unittest discover -s tests -v
-# All 26 tests, with the pinned Harbor environment and upstream checkout available.
+# All 28 tests, with the pinned Harbor environment and upstream checkout available.
 AGENTEVAL_UPSTREAM_DIR=/path/to/AgentGym /tmp/agenteval-harbor/bin/python -m unittest discover -s tests -v
 # Independent, pinned Python 3.9.12 comparison with the original implementation.
 bash scripts/run_upstream_check.sh
@@ -181,7 +244,7 @@ uv run python scripts/check_native_original.py \
   --run-name original-native-smoke-01
 ```
 
-The complete unit/integration suite passed **26/26 with no skips**. A separate
+The complete unit/integration suite passed **28/28 with no skips**. A separate
 real Harbor/Docker smoke test also exercised the native agent on one Maze and one
 Wordle task using a **local mock model endpoint**, achieving 2/2 successful
 reference episodes with no exceptions ([results](validation/harbor-native-smoke.json)).
@@ -203,22 +266,22 @@ It passed **350 scenarios and 3,280 state comparisons across all 50 tasks**,
 including 50/50 original-engine reference solutions. The machine-readable result
 is in [validation/differential.json](validation/differential.json).
 
-After the team agrees on API settings, install the adapter in the same Python
-environment as Harbor and fill in `parity_agenteval-games.yaml`. Its model name is
-a deliberate placeholder; its numeric values are examples, not approved settings.
-The API key stays on the host via `OPENAI_API_KEY`; `OPENAI_BASE_URL` optionally
-selects an OpenAI-compatible endpoint. Use identical values on both sides.
-
-Some models reject one of the default request fields. Set `temperature`,
-`max_tokens` or `top_p` to `null` (`none` on the original-side command line)
-to leave that field out of the request, and pass provider-specific fields such
-as `max_completion_tokens` through `extra_body` (`--extra-body` with a JSON
-object). The same shared code builds the request on both sides, and each
-report records the effective settings.
+To reproduce the parity runs, install the adapter in the same Python environment
+as Harbor. Start the model endpoint that both sides use; it needs a Codex CLI
+login that can reach the model (`--profile` selects a Codex profile):
 
 ```bash
-# Harbor native conversation side; model calls are billable.
-/tmp/agenteval-harbor/bin/harbor run -c parity_agenteval-games.yaml
+python scripts/codex_chat_bridge.py --effort medium --port 18080 --concurrency 6 \
+  --log /tmp/agenteval-parity/bridge-calls.jsonl
+# The bridge ignores the key, but the policy requires a non-empty one.
+export AGENTEVAL_BRIDGE_KEY=unused-local-bridge
+```
+
+Harbor side, with the settings in `parity_agenteval-games.yaml`:
+
+```bash
+/tmp/agenteval-harbor/bin/harbor run -c parity_agenteval-games.yaml \
+  -o /tmp/agenteval-parity/jobs --job-name harbor-run1
 ```
 
 For the original side, check out AgentGym at the commit below, initialize its
@@ -251,28 +314,45 @@ this adapter:
 uv run python -m agenteval_games.original_runner \
   --upstream-dir /path/to/AgentGym \
   --environment-base-url http://127.0.0.1:36001 \
-  --model 'TEAM_APPROVED_EXACT_MODEL_ID' \
-  --temperature 0 --max-tokens 2048 --top-p 1 \
+  --model gpt-6.1-astra \
+  --temperature none --max-tokens none --top-p none \
   --request-timeout-sec 120 --environment-timeout-sec 30 --episode-timeout-sec 1500 \
-  --run-id 1 --output-json /path/to/original-run1.json
+  --api-base http://127.0.0.1:18080/v1 --api-key-env AGENTEVAL_BRIDGE_KEY \
+  --run-id 1 --output-json /tmp/agenteval-parity/original-run1.json
 ```
 
-Replace the illustrative model/settings with the agreed values. Use `--task-ids`
-with the same selected IDs on both sides for sanity checks, and unique output/run
-names for repeats. The original runner verifies the local source commits and
-prompts, but the operator must ensure that the HTTP server was actually launched
-from that checkout. It does not replay the adapter engine as the original side.
-Both runners log model requests/responses, effective settings, usage, and failures;
-uncertain HTTP steps are not retried or silently scored as losses. The prospective
-shared policy also imposes an explicit episode deadline (illustratively 1,500
-seconds, within Harbor's 1,800-second agent timeout). Unlike upstream APIAgent's
-unbounded error retries, errors and deadline expiration stop the run without a
-score. This policy is identical on both sides and is not presented as a
-reproduction of historical model scores.
+Repeat both sides with new run names, then compare the runs and replay each
+side's replies through the other environment:
 
-The [original benchmark](https://github.com/WooooDyy/AgentGym/tree/3ef9235d23e68e7c2920c5422ad957dc8ced5c6c)
-and the bundled provenance manifest identify the original side. Model result
-uploads, a parity fork/PR, dataset PR, and registry publication do not exist yet.
+```bash
+uv run python scripts/parity_compare.py \
+  --original /tmp/agenteval-parity/original-run{1,2,3}.json \
+  --harbor /tmp/agenteval-parity/jobs/harbor-run{1,2,3}
+uv run python scripts/cross_replay.py \
+  --original /tmp/agenteval-parity/original-run{1,2,3}.json \
+  --harbor /tmp/agenteval-parity/jobs/harbor-run{1,2,3} \
+  --environment-base-url http://127.0.0.1:36001
+```
+
+A model with a plain OpenAI-compatible Chat Completions endpoint needs no bridge:
+point `api_base` (or `OPENAI_BASE_URL`) and the key variable at it. Some models
+reject one of the default request fields. Set `temperature`, `max_tokens` or
+`top_p` to `null` (`none` on the original-side command line) to leave that field
+out of the request, and pass provider-specific fields such as
+`max_completion_tokens` through `extra_body` (`--extra-body` with a JSON
+object). The same shared code builds the request on both sides, and each report
+records the effective settings.
+
+Use `--task-ids` with the same selected IDs on both sides for sanity checks. The
+original runner verifies the local source commits and prompts, but the operator
+must ensure that the HTTP server was actually launched from that checkout. It
+does not replay the adapter engine as the original side. Both runners log model
+requests and responses, effective settings, usage, and failures; uncertain HTTP
+steps are not retried or silently scored as losses. The shared policy also
+imposes an explicit episode deadline (1,500 seconds in the parity runs, within
+Harbor's 1,800-second agent timeout). Unlike upstream APIAgent's unbounded error
+retries, errors and deadline expiration stop the run without a score. This
+policy is identical on both sides.
 
 ## Notes & Caveats
 
@@ -296,7 +376,7 @@ uploads, a parity fork/PR, dataset PR, and registry publication do not exist yet
 - Source/runtime pins: AgentGym `3ef9235d23e68e7c2920c5422ad957dc8ced5c6c`,
   LMRL-Gym `83abeedb3a461c3d7d20572b73318a259d85f2ac`, AgentEval
   `1f090d52ef01a83a889da02699e34a500e35a274`, Python **3.9.12** for the game
-  sidecar and verifier, and Harbor **0.26.0**. All three task images are
+  sidecar and verifier, and Harbor **0.27.0**. All three task images are
   digest-pinned. Adapter generation uses Python 3.11+.
 - The agent image only carries the `game` client, so it does not use the
   benchmark's Python. It is based on Debian 12 (`python:3.12-slim-bookworm`)
@@ -319,10 +399,13 @@ uploads, a parity fork/PR, dataset PR, and registry publication do not exist yet
   authenticity comes from that collection path rather than from anything the
   agent container handles. A compromised container runtime or Harbor host is
   outside this boundary.
-- `parity_experiment.json` intentionally contains `[]`. The repository's completed
-  adapter validator rejects an empty experiment array; this is an explicit WIP
-  gap until real, coordinated experiments can populate it. No fabricated scores,
-  matching agents, costs, or publication links are supplied.
+- Parity limitations: the parity model was called through the Codex CLI, with
+  Codex's system prompt and without settable sampling parameters, under a model
+  ID that is not a dated identifier and through a private gateway that reviewers
+  cannot use. Both sides scored 100%, so parity rests on equal scores at the
+  ceiling plus the model-free replay check described in the parity section. A
+  weaker model with a plain chat endpoint would give a more discriminating
+  comparison and can be run with the same commands.
 
 ## Installation / Prerequisites
 
@@ -332,7 +415,7 @@ baseline in a separate environment:
 
 ```bash
 uv venv --python 3.12 /tmp/agenteval-harbor
-uv pip install --python /tmp/agenteval-harbor/bin/python 'harbor==0.26.0'
+uv pip install --python /tmp/agenteval-harbor/bin/python 'harbor==0.27.0'
 uv pip install --python /tmp/agenteval-harbor/bin/python -e .
 /tmp/agenteval-harbor/bin/harbor --version
 ```
@@ -359,8 +442,8 @@ deterministic checks do not use model credentials.
   workaround.
 - **Game host is unavailable:** run with the Docker backend and check the game
   sidecar health. The terminal client uses the Compose service name `game`.
-- **Structural validator reports missing parity evidence:** expected for this WIP;
-  complete coordinated experiments rather than inserting placeholder metrics.
+- **A parity run stops with a protocol error:** model or environment errors are
+  never scored as losses. Fix the cause and repeat the run under a new run name.
 
 ## Citation
 

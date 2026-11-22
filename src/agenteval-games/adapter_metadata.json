@@ -13,7 +13,7 @@
           "AgentGym@3ef9235"
         ],
         "adaptable": true,
-        "notes": "Complete published AgentEval maze test split, IDs 0\u201324."
+        "notes": "Complete published AgentEval maze test split, IDs 0–24."
       },
       {
         "split": "wordle_test",
@@ -23,45 +23,27 @@
           "AgentGym@3ef9235"
         ],
         "adaptable": true,
-        "notes": "Complete published AgentEval wordle test split, IDs 0\u201324."
+        "notes": "Complete published AgentEval wordle test split, IDs 0–24."
       }
     ],
     "harbor_adapter": [
       {
-        "split": "maze_test",
-        "adapted_benchmark_size": 25,
-        "parity_benchmark_size": 0,
-        "parity_sampling_rate": 0,
-        "registry_benchmark_size": 0,
+        "split": "full",
+        "adapted_benchmark_size": 50,
+        "parity_benchmark_size": 50,
+        "parity_sampling_rate": 1.0,
+        "registry_benchmark_size": 50,
         "added_agents": [
-          "AgentEvalNativeAgent@0.1.0"
+          "agenteval-native@0.1.0"
         ],
         "parity_matching_agents": [
-          "None"
+          "agenteval-native@0.1.0+gpt-6.1-astra"
         ],
         "parity_unmatching_agents": [
           "None"
         ],
-        "parity_costs": null,
-        "notes": "WIP: model parity has not run, costs and configuration await Harbor team coordination. No registry publication. Empty parity results do not imply a match."
-      },
-      {
-        "split": "wordle_test",
-        "adapted_benchmark_size": 25,
-        "parity_benchmark_size": 0,
-        "parity_sampling_rate": 0,
-        "registry_benchmark_size": 0,
-        "added_agents": [
-          "AgentEvalNativeAgent@0.1.0"
-        ],
-        "parity_matching_agents": [
-          "None"
-        ],
-        "parity_unmatching_agents": [
-          "None"
-        ],
-        "parity_costs": null,
-        "notes": "WIP: model parity has not run, costs and configuration await Harbor team coordination. No registry publication. Empty parity results do not imply a match."
+        "parity_costs": "No per-token charge to the contributor (private gateway). Usage: 32.5M input and 0.07M output tokens for the six parity runs, plus 5.3M input (4.5M cached) and 0.03M output tokens for the standard-agent run.",
+        "notes": "Collective entry for the Maze (25) and Wordle (25) test splits. Parity on all 50 tasks, 3 runs per side: 100.00 ± 0.00 on both sides, with the model called through the Codex CLI and a model-free replay check of all 1,537 recorded steps. See parity_experiment.json for the conditions and limits of this comparison."
       }
     ]
   }
